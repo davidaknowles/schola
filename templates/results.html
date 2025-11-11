@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Publications - {{ author_name }}{% endblock %}
+{% block content %}
+<h1>Publications - {{ author_name }}</h1>
+<p><a href="{{ url_for('home') }}">&larr; New Search</a></p>
+<div class="card metrics-bar">
+  <strong>Total Publications:</strong> {{ publications|length }} |
+  <strong>Total Citations:</strong> {{ publications|map(attribute='Citation_Count')|select|string|map('int')|sum if publications else 0 }}
+</div>
+<div class="controls">
+  <label for="sortBy">Sort by:</label>
+  <select id="sortBy" onchange="sortPublications()">
+    <option value="year">Year (newest first)</option>
+    <option value="citations">Citations (most cited first)</option>
+    <option value="rcr" selected>RCR (highest first)</option>
+  </select>
+</div>
+<div id="publications">
+  {% set search_parts = author_name.split() %}
+  {% set search_last = search_parts[0].lower() if search_parts else '' %}
+  {% set search_initials = (search_parts[1:]|join).lower() if search_parts|length > 1 else '' %}
+  {% for pub in publications %}
+    {% set year = pub.Year or 'N/A' %}
+    {% set citations = pub.Citation_Count or 0 %}
+    {% set rcr_imputed = pub.RCR_imputed or 0 %}
+    {% set rcr_raw = pub.RCR %}
+    {% set display_rcr = (rcr_raw if rcr_raw not in (None,'','N/A') else rcr_imputed) %}
+    <div class="publication" data-year="{{ year }}" data-citations="{{ citations }}" data-rcr="{{ rcr_imputed }}">
+      <div class="title" data-index="{{ loop.index0 }}">{{ pub.Title or 'No title' }}</div>
+      <div class="authors">
+        {% for a in (pub.Authors or '').split(', ') %}
+          {% set parts = a.split(' ') %}
+          {% set last = parts[0].lower() if parts else '' %}
+          {% set initials = (parts[1:]|join).lower() if parts|length > 1 else '' %}
+          {% if last == search_last and (search_initials == '' or initials.startswith(search_initials)) %}<strong>{{ a }}</strong>{% else %}{{ a }}{% endif %}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </div>
+      <div class="meta"><span class="journal">{{ pub.Journal }}</span> ({{ year }})</div>
+      <div class="metrics">
+        <div class="metric"><strong>Citations:</strong> {{ citations }}</div>
+        <div class="metric"><strong>RCR:</strong> {{ '%.2f'|format(display_rcr) }}{% if rcr_raw in (None,'','N/A') %}<span class="rcr-badge" title="Imputed from citations/time">IMPUTED</span>{% endif %}</div>
+      </div>
+      <div class="links">
+  <a class="link" target="_blank" href="{{ pub.PubMed_URL }}">📄 PubMed</a>
+  {% if pub.DOI %}<a class="link" target="_blank" href="https://doi.org/{{ pub.DOI }}">🔗 DOI</a>{% endif %}
+  <a class="link abstract-link" href="#" data-index="{{ loop.index0 }}">📖 Abstract</a>
+      </div>
+      <div class="abstract" id="abstract-{{ loop.index0 }}">
+        <strong>Abstract:</strong><br>{{ pub.Abstract or 'No abstract available' }}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleAbstract(id){const el=document.getElementById('abstract-'+id);if(el){el.classList.toggle('show');}}
+function sortPublications(){const sortBy=document.getElementById('sortBy').value;const container=document.getElementById('publications');const pubs=Array.from(container.getElementsByClassName('publication'));pubs.sort((a,b)=>{let av,bv;if(sortBy==='year'){av=parseInt(a.getAttribute('data-year'))||0;bv=parseInt(b.getAttribute('data-year'))||0;return bv-av;}else if(sortBy==='citations'){av=parseInt(a.getAttribute('data-citations'))||0;bv=parseInt(b.getAttribute('data-citations'))||0;return bv-av;}else if(sortBy==='rcr'){av=parseFloat(a.getAttribute('data-rcr'))||0;bv=parseFloat(b.getAttribute('data-rcr'))||0;return bv-av;}return 0;});container.innerHTML='';pubs.forEach(p=>container.appendChild(p));}
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('sortBy').value='rcr';
+  sortPublications();
+  document.querySelectorAll('.title').forEach(el=>{
+    el.addEventListener('click',()=>{toggleAbstract(el.getAttribute('data-index'));});
+  });
+  document.querySelectorAll('.abstract-link').forEach(el=>{
+    el.addEventListener('click',(e)=>{e.preventDefault();toggleAbstract(el.getAttribute('data-index'));});
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Scholar Explorer | Search{% endblock %}
+{% block content %}
+<h1>Scholar Explorer</h1>
+<div class="card">
+  <form method="GET" action="{{ url_for('results') }}">
+    <div class="row">
+      <label for="author">Author (e.g., Knowles DA)</label>
+      <input id="author" name="author" type="text" required placeholder="LastName Initials" value="{{ request.args.get('author','') }}">
+    </div>
+    <div class="row">
+      <label for="email">Email (for Entrez)</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" value="{{ request.args.get('email','') }}">
+    </div>
+    <div class="row">
+      <label for="start_year">Start Year (optional)</label>
+      <input id="start_year" name="start_year" type="text" pattern="[0-9]{4}" placeholder="2018" value="{{ request.args.get('start_year','') }}">
+    </div>
+    <div class="row">
+      <label for="end_year">End Year (optional)</label>
+      <input id="end_year" name="end_year" type="text" pattern="[0-9]{4}" placeholder="2025" value="{{ request.args.get('end_year','') }}">
+    </div>
+    <div class="row">
+      <label>
+        <input id="filter_position" name="filter_position" type="checkbox" value="1" {% if request.args.get('filter_position', '1') == '1' %}checked{% endif %}>
+        Only include papers where author is in first 2 or last 2 positions
+      </label>
+    </div>
+    <button class="btn" type="submit">Fetch Publications</button>
+  </form>
+  <p class="notice">RCR values are field-normalized citation metrics. Missing values are imputed based on citations per year.</p>
+</div>
+{% endblock %}
